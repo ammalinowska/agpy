@@ -31,12 +31,10 @@ class FrameImg:
         img, img_treshold = self.load_img()
         self.get_img_contours(img_treshold)
         self.process_contours()
-        # quit()
         self.create_crystal_attr_list()
         self.check_contours()
         # self.drop_upper_outlier_area_crystal()
         # self.drop_edge_contours()
-
 
     def drop_upper_outlier_area_crystal(self):
         self.crystal_areas.sort()
@@ -330,19 +328,19 @@ class CrystalRecog:
         self.min_x = self.s_contours_dfs[len(self.s_contours_dfs)-1].x.min()
         self.c_count += 1
 
-    def add_dubble_crystalobject(self, c_obj1, c_obj2):
-        s_contours_df = pd.concat([c_obj1.s_contours_df,c_obj2.s_contours_df])
-        self.s_contours_dfs.append(s_contours_df)
-        raw_contours = np.concatenate((c_obj1.contour_raw, c_obj2.contour_raw))
-        self.raw_contours.append(raw_contours)
+    # def add_dubble_crystalobject(self, c_obj1, c_obj2):
+    #     s_contours_df = pd.concat([c_obj1.s_contours_df,c_obj2.s_contours_df])
+    #     self.s_contours_dfs.append(s_contours_df)
+    #     raw_contours = np.concatenate((c_obj1.contour_raw, c_obj2.contour_raw))
+    #     self.raw_contours.append(raw_contours)
 
-        area = (c_obj1.area + c_obj2.area) * 0.5
-        self.areas.append(area)
-        x_center = (c_obj1.center_arr[0] + c_obj2.center_arr[0])*0.5
-        y_center = (c_obj1.center_arr[1] + c_obj2.center_arr[1])*0.5
-        center_arr = np.array([x_center, y_center])
-        print(f'{c_obj1.center_arr} + {c_obj2.center_arr} = {center_arr}')
-        self.center_arrays.append(center_arr)
+    #     area = (c_obj1.area + c_obj2.area) * 0.5
+    #     self.areas.append(area)
+    #     x_center = (c_obj1.center_arr[0] + c_obj2.center_arr[0])*0.5
+    #     y_center = (c_obj1.center_arr[1] + c_obj2.center_arr[1])*0.5
+    #     center_arr = np.array([x_center, y_center])
+    #     print(f'{c_obj1.center_arr} + {c_obj2.center_arr} = {center_arr}')
+    #     self.center_arrays.append(center_arr)
 
 
 # MAKE METHOD OF CrystalTracking?
@@ -400,11 +398,9 @@ def set_and_check_folder(FOLDER_NAME, create_boo = False):
 
 def create_frame_list(img_files, file_count, imgs_dir,
         output_img_dir, IMAGE_FORMAT, plot_boolean = False):
-    """
-    Function that loops through the input img files folder, and creates
+    """ Function that loops through the input img files folder, and creates
     and instance of FrameImg for each image found with the correct image format.
-    Optionally, plots all found contours on the inputted image.
-    """
+    Optionally, plots all found contours on the inputted image. """
     frame_list = []
     for f_numerator, file in enumerate(img_files):
         file_name = file['filename']
@@ -497,24 +493,24 @@ if __name__ == "__main__":
             #                     print('T-T-T-T-tripple comboooooooo! Figure this shit out')
                         # From the crystals in crys_list, find max_x, max_y, etc.
                         # Check if these values are within min/max y and x of CrystalRecog
-#
 
-            #             # print(len(c_central_list))
+        # For each Crystal:
+            # Set up detection box (Upper and lower x and y coords + some margin)
+            # Find all center points in detection box (Just center points will work?)
+                # Find/identify corresponding crystals
+                # Check if all contour points of identified crystals are in the detection box
+            # Compare area of crystalRecog to previous one.
+                # Evaluate if adding other identified crystals would be closer to previous area, together with checking if the
+                    #combined center point would be closer to the previous center point of the Crystal.
+                        # If yes, loop backwards through frames, and add the additional crystal attributes to crystal Recog
+
+
         post_frame_center_coord_count = len(c_central_list)
         print('------------------------------------------------------')
         print(f'Frame # {i + 1}:')
         print(f'C coords went from {pre_frame_center_coord_count} to {post_frame_center_coord_count}  ')
         print(f'Used count: {pre_frame_center_coord_count - post_frame_center_coord_count }')
     crystal_linking_time = (time.time() - start_time) - img_processing_time # Log time it took to link crystals
-
-    # crystal_tracking_count = len(crystal_tracking_list)
-    # for i,b in enumerate(crystal_tracking_list):
-    #     if b.cunt_num == 68:
-    #         test_arr = np.array(b.s_contours[0])
-    #         print(f'{min(test_arr[...,0])}')
-    #         print(f'{max(test_arr[...,0])}')
-    #         print(f'{min(test_arr[...,1])}')
-    #         print(f'{max(test_arr[...,1])}')
 
 
     crystal_tracking_count = len(crystal_tracking_list)
