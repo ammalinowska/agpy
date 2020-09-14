@@ -13,6 +13,7 @@ from math import sqrt
 from pprint import pprint
 import itertools
 import sys
+import pickle
 
 class FrameImg:
     ''' Add Description '''
@@ -64,8 +65,17 @@ class FrameImg:
         self.img_attributes(img)
         img_denoised = self.denoise_img(img)
         img_treshold = self.tresholding_img(img_denoised)
+        self.plot_stages(img, img_denoised, img_treshold)
         # Add in possible plot stages method here before the images go out of scope.
         return img, img_treshold
+
+    def plot_stages(self, img, img_denoised, img_treshold):
+        images = [img, img_denoised, img_treshold]
+        for i in range(len(images)):
+            plt.subplot(2, 2, i+1), plt.imshow(images[i], 'gray')
+            plt.xticks([]), plt.yticks([])
+        plt.suptitle(self.file_name, fontsize = 8)
+        plt.show()
 
     def img_attributes(self, img):
         ''' Retreive image height and width and store them as an attribute. Used for checking if the
@@ -76,14 +86,14 @@ class FrameImg:
         ''' Desnoise image. 
             Docs : https://docs.opencv.org/2.4/modules/photo/doc/denoising.html '''
         return cv2.fastNlMeansDenoising(src=img, dst=None, h=10,
-        templateWindowSize=9, searchWindowSize=23)
+        templateWindowSize=11, searchWindowSize=27)
 
     def tresholding_img(self,img_denoised):
         ''' Treshold image. 
             Docs: https://docs.opencv.org/3.4/d7/d1b/group__imgproc__misc.html#ga72b913f352e4a1b1b397736707afcde3 '''
         return cv2.adaptiveThreshold(src=img_denoised, maxValue=255,
                 adaptiveMethod=cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                thresholdType=cv2.THRESH_BINARY, blockSize=179, C=1)
+                thresholdType=cv2.THRESH_BINARY, blockSize=199, C=1)
 
     def get_img_contours(self, img_treshold):
         ''' Retreive image contours. ## NEED TO WORK WITH RETR_CCOMP instead of RETR_EXTERNAL TO GET HIERACHY FOR DEALIG WITH INCEPTIONS
@@ -342,6 +352,37 @@ class CrystalRecog:
     #     print(f'{c_obj1.center_arr} + {c_obj2.center_arr} = {center_arr}')
     #     self.center_arrays.append(center_arr)
 
+    def plot_contours_across_frames(self, file_count, output_img_dir):
+        """ Add description """
+        fig = plt.figure()
+        fig.tight_layout()
+        gs1 = fig.add_gridspec(nrows=3, ncols=2)
+        fig.suptitle(t=f'#{self.cunt_num}; FU{self.c_count}/{file_count}', fontsize=12, va='top')
+        fig_ax1 = fig.add_subplot(gs1[:-1, :])
+        fig_ax1.title.set_text('Contours')
+        fig_ax1.title.set_fontsize(12)
+        for contour in self.s_contours:
+            fig_ax1.plot(contour[...,0], contour[...,1])
+        fig_ax1.invert_yaxis()
+
+        fig_ax2 = fig.add_subplot(gs1[-1, :-1])
+        fig_ax2.title.set_text('Area')
+        fig_ax2.plot(self.areas)
+        fig_ax2.title.set_fontsize(10)
+
+        fig_ax3 = fig.add_subplot(gs1[-1, -1])
+        fig_ax3.title.set_text('Mean Curvature')
+        fig_ax3.plot(self.mean_curvatures)
+        fig_ax3.title.set_fontsize(10)
+
+        frames_used = ','.join(self.frames_used)
+        fig.text(0.02, 0.02, 'FU: ' + frames_used, color='grey',fontsize=4)
+        fig.subplots_adjust(left=None, bottom=None, right=None, top=0.90,
+            wspace=0.3, hspace=0.5)
+        fig.savefig(os.path.join(output_img_dir, f'newtest_img{self.cunt_num}.png'))
+        plt.close()
+
+
 
 # MAKE METHOD OF CrystalTracking?
 def euqli_dist(p, q, squared=False):
@@ -420,9 +461,9 @@ if __name__ == "__main__":
     start_time = time.time()
     # Constants:
     IMAGE_FORMAT = '.png'
-    INPUT_FOLDER_NAME = 'InputImgs'
-    IMAGE_OUTPUT_FOLDER_NAME = 'FR_1209_288_ROI'
-    MAX_CENTER_DISTANCE = 6
+    INPUT_FOLDER_NAME = 'TestImgs_4'
+    IMAGE_OUTPUT_FOLDER_NAME = 'OutputImgs'
+    MAX_CENTER_DISTANCE = 10
     AREA_PCT = 0.1
     CENTER_PCT = 0.1
     MIN_PLOT_FRAMES = 0
@@ -503,6 +544,7 @@ if __name__ == "__main__":
                 # Evaluate if adding other identified crystals would be closer to previous area, together with checking if the
                     #combined center point would be closer to the previous center point of the Crystal.
                         # If yes, loop backwards through frames, and add the additional crystal attributes to crystal Recog
+                        # Then continue in loop as normal
 
 
         post_frame_center_coord_count = len(c_central_list)
@@ -514,40 +556,11 @@ if __name__ == "__main__":
 
 
     crystal_tracking_count = len(crystal_tracking_list)
-    for i,b in enumerate(crystal_tracking_list):
-        if b.cunt_num == 77:
-            print(b.areas)
-            print(b.center_arrays)
-            print(np.array(b.s_contours[0]))
-            # print(b.min_x, b.max_x, b.min_y, b.max_y)
+    for i,crystallcoll in enumerate(crystal_tracking_list):
+        if crystallcoll.cunt_num == 79:
+            print(crystallcoll.areas)
         print(f'Plotting Crystal {i}/{crystal_tracking_count}', end = '\r')
-        if b.c_count > MIN_PLOT_FRAMES:
-            fig = plt.figure()
-            fig.tight_layout()
-            gs1 = fig.add_gridspec(nrows=3, ncols=2)
-            fig_ax1 = fig.add_subplot(gs1[:-1, :])
-            fig_ax1.title.set_text('Contours')
-            for contour in b.s_contours:
-                fig_ax1.plot(contour[...,0], contour[...,1])
-            fig_ax1.invert_yaxis()
-            fig_ax1.title.set_fontsize(12)
-            fig.suptitle(t=f'#{b.cunt_num}; FU{b.c_count}/{file_count}', fontsize=12, va='top')
-
-            fig_ax2 = fig.add_subplot(gs1[-1, :-1])
-            fig_ax2.title.set_text('Area')
-            fig_ax2.plot(b.areas)
-            fig_ax2.title.set_fontsize(10)
-
-            fig_ax3 = fig.add_subplot(gs1[-1, -1])
-            fig_ax3.title.set_text('Mean Curvature')
-            fig_ax3.plot(b.mean_curvatures)
-            fig_ax3.title.set_fontsize(10)
-            frames_used = ','.join(b.frames_used)
-            fig.text(0.02, 0.02, 'FU: ' + frames_used, color='grey',fontsize=4)
-            fig.subplots_adjust(left=None, bottom=None, right=None, top=0.90,
-                wspace=0.3, hspace=0.5)
-            fig.savefig(os.path.join(output_img_dir, f'newtest_img{b.cunt_num}.png'))
-            plt.close()
+        crystallcoll.plot_contours_across_frames(file_count, output_img_dir)
 
     print('######################################################')
     print(f'img processing time: {img_processing_time} ')
