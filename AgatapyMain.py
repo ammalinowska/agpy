@@ -65,7 +65,7 @@ class FrameImg:
         self.img_attributes(img)
         img_denoised = self.denoise_img(img)
         img_treshold = self.tresholding_img(img_denoised)
-        self.plot_stages(img, img_denoised, img_treshold)
+        # self.plot_stages(img, img_denoised, img_treshold)
         # Add in possible plot stages method here before the images go out of scope.
         return img, img_treshold
 
@@ -100,8 +100,6 @@ class FrameImg:
             Docs: https://docs.opencv.org/3.4/d3/dc0/group__imgproc__shape.html#ga17ed9f5d79ae97bd4c7cf18403e1689a'''
         self.contours, self.hierarchy = cv2.findContours(img_treshold,
             cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-        # print(self.hierarchy)
-# RETR_EXTERNAL
 
     def process_contours(self):
         ''' First creates two empty lists to store the crystals and the reminaining/other objects. Next, 
@@ -131,7 +129,6 @@ class FrameImg:
         self.crystal_lengths = [i.length for i in self.crystalobjects]
         self.contours_lenghts = [i.contour_length for i in self.crystalobjects]
         self.crystal_centers = [i.center_arr for i in self.crystalobjects]
-
 
     def check_contours(self):
         ''' Function thats checks if the x and y axes have been swapped, and corrects this if so.
@@ -177,16 +174,6 @@ class FrameImg:
                     break  # to stop the loop   
         post_drop_count = len(self.crystalobjects)
         print(f'Edge dropping dropped {pre_drop_count - post_drop_count} crystals')       
-
-    # def plot_stages(self):
-        ''' Add Description '''
-        # if not self.org_img is None:
-        #     images = [self.org_img, self.img, self.img_denoised, self.img_treshold]
-        #     for i in range(len(images)):
-        #         plt.subplot(2, 2, i+1), plt.imshow(images[i], 'gray')
-        #         plt.xticks([]), plt.yticks([])
-        #     plt.suptitle(self.file_name, fontsize = 8)
-        #     plt.show()
 
     def plot_contours(self, mark_center = False, mark_number = False,
             save_image = False, file_name = f'contourplot1.png'):
@@ -331,12 +318,20 @@ class CrystalRecog:
         self.center_arrays.append(c_obj.center_arr)
         self.mean_curvatures.append(c_obj.s_contours_df['mean(curvature)'].min())
         self.frames_used.append(str(c_obj.frame_num))
-
-        self.max_y = self.s_contours_dfs[len(self.s_contours_dfs)-1].y.max()
-        self.min_y = self.s_contours_dfs[len(self.s_contours_dfs)-1].y.min()
-        self.max_x = self.s_contours_dfs[len(self.s_contours_dfs)-1].x.max()
-        self.min_x = self.s_contours_dfs[len(self.s_contours_dfs)-1].x.min()
         self.c_count += 1
+
+    def retreive_outer_bounds(self, padding_margin):
+        max_y = self.s_contours_dfs[len(self.s_contours_dfs)-1].y.max()
+        min_y = self.s_contours_dfs[len(self.s_contours_dfs)-1].y.min()
+        y_padding = (max_y - min_y)*padding_margin
+        max_y += y_padding
+        min_y -= min_y - y_padding
+        max_x = self.s_contours_dfs[len(self.s_contours_dfs)-1].x.max()
+        min_x = self.s_contours_dfs[len(self.s_contours_dfs)-1].x.min()
+        x_padding = (max_x - min_x)*padding_margin
+        max_x += x_padding
+        min_x -= x_padding
+        return min_y, max_y, min_x, max_x
 
     # def add_dubble_crystalobject(self, c_obj1, c_obj2):
     #     s_contours_df = pd.concat([c_obj1.s_contours_df,c_obj2.s_contours_df])
@@ -414,16 +409,19 @@ def get_img_files_ordered(dir_i):
     together with a count of the total number of frames.  """
     img_files = []
     for file in os.listdir(dir_i):
-        file_i = {
-        'filename' : file,
-        'file_num' : int(file.split('frame')[1].split('.')[0])
-        }
-        img_files.append(file_i )
+        try:
+            file_i = {
+            'filename' : file,
+            'file_num' : int(file.split('frame')[1].split('.')[0])
+            }
+            img_files.append(file_i )
+        except IndexError:
+            pass
     ordered_img_files = sorted(img_files, key=lambda k: k['file_num'])
     file_count = len(ordered_img_files)
     return ordered_img_files,file_count
 
-def set_and_check_folder(FOLDER_NAME, create_boo = False):
+def set_and_check_folder(FOLDER_NAME, create_boo=False):
     """ Function to set up a directory and check if it exists."""
     fol_path = os.path.join(os.getcwd(), FOLDER_NAME)
     if os.path.isdir(fol_path):
@@ -457,12 +455,20 @@ def create_frame_list(img_files, file_count, imgs_dir,
             print(f'{file_name} has a different file format than the expected {IMAGE_FORMAT}.')
     return frame_list
 
+def setup_detection_box(target_crys, padding_margin):
+    """ Retreive the upper and lower x and y coordinates, in which a crystal's contour is contained, with 
+    and additional padding margin to be able to detect possible fusions/splits over time. """
+    pass
+
+
+
 if __name__ == "__main__":
     start_time = time.time()
     # Constants:
     IMAGE_FORMAT = '.png'
     INPUT_FOLDER_NAME = 'TestImgs_4'
     IMAGE_OUTPUT_FOLDER_NAME = 'OutputImgs'
+    CSV_EXPORT_FOLDER = 'Export_csvs'
     MAX_CENTER_DISTANCE = 10
     AREA_PCT = 0.1
     CENTER_PCT = 0.1
@@ -471,6 +477,7 @@ if __name__ == "__main__":
 
     imgs_dir = set_and_check_folder(INPUT_FOLDER_NAME)
     output_img_dir = set_and_check_folder(IMAGE_OUTPUT_FOLDER_NAME, True)
+    csv_export_dir = set_and_check_folder(CSV_EXPORT_FOLDER, True)
     img_files, file_count = get_img_files_ordered(imgs_dir)
     frame_list = create_frame_list(img_files, file_count, imgs_dir,
         output_img_dir, IMAGE_FORMAT, PLOT_FRAME_CONTOURS)
@@ -556,11 +563,19 @@ if __name__ == "__main__":
 
 
     crystal_tracking_count = len(crystal_tracking_list)
-    for i,crystallcoll in enumerate(crystal_tracking_list):
-        if crystallcoll.cunt_num == 79:
-            print(crystallcoll.areas)
-        print(f'Plotting Crystal {i}/{crystal_tracking_count}', end = '\r')
-        crystallcoll.plot_contours_across_frames(file_count, output_img_dir)
+    # for i,crystallcoll in enumerate(crystal_tracking_list):
+    #     if crystallcoll.cunt_num == 79:
+    #         print(crystallcoll.areas)
+    #     print(f'Plotting Crystal {i}/{crystal_tracking_count}', end = '\r')
+    #     crystallcoll.plot_contours_across_frames(file_count, output_img_dir)
+
+    for i, crystallcoll in enumerate(crystal_tracking_list):
+        df_i = pd.concat(crystallcoll.s_contours_dfs)
+        csv_file_name = f'{crystallcoll.cunt_num}.csv'
+        csv_export_dir = os.path.join(csv_export_dir, csv_file_name)
+        df_i.to_csv(csv_export_dir)
+
+
 
     print('######################################################')
     print(f'img processing time: {img_processing_time} ')
